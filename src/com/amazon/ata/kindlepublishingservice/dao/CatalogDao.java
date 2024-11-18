@@ -5,11 +5,15 @@ import com.amazon.ata.kindlepublishingservice.exceptions.BookNotFoundException;
 import com.amazon.ata.kindlepublishingservice.publishing.KindleFormattedBook;
 import com.amazon.ata.kindlepublishingservice.utils.KindlePublishingUtils;
 
+
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.inject.Inject;
 
 public class CatalogDao {
@@ -29,28 +33,37 @@ public class CatalogDao {
     /**
      * Returns the latest version of the book from the catalog corresponding to the specified book id.
      * Throws a BookNotFoundException if the latest version is not active or no version is found.
+     *
      * @param bookId Id associated with the book.
      * @return The corresponding CatalogItem from the catalog table.
      */
     public CatalogItemVersion getBookFromCatalog(String bookId) {
         CatalogItemVersion book = getLatestVersionOfBook(bookId);
 
-        if (book == null || book.isInactive()) {
-            throw new BookNotFoundException(String.format("No book found for id: %s", bookId));
+        if (book == null) {
+            throw new BookNotFoundException(String.format("No active book found for id: %s", bookId));
         }
 
         return book;
     }
 
-    // Returns null if no version exists for the provided bookId
+    public void saveCatalogItemVersion(CatalogItemVersion book) {
+        dynamoDbMapper.save(book);
+    }
+
     private CatalogItemVersion getLatestVersionOfBook(String bookId) {
         CatalogItemVersion book = new CatalogItemVersion();
         book.setBookId(bookId);
 
-        DynamoDBQueryExpression<CatalogItemVersion> queryExpression = new DynamoDBQueryExpression()
-            .withHashKeyValues(book)
-            .withScanIndexForward(false)
-            .withLimit(1);
+        Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
+        expressionAttributeValues.put(":inactive", new AttributeValue().withBOOL(false));
+
+        DynamoDBQueryExpression<CatalogItemVersion> queryExpression = new DynamoDBQueryExpression<CatalogItemVersion>()
+                .withHashKeyValues(book)
+                .withScanIndexForward(false)
+                .withLimit(1)
+                .withFilterExpression("inactive = :inactive")
+                .withExpressionAttributeValues(expressionAttributeValues);
 
         List<CatalogItemVersion> results = dynamoDbMapper.query(CatalogItemVersion.class, queryExpression);
         if (results.isEmpty()) {
@@ -59,3 +72,4 @@ public class CatalogDao {
         return results.get(0);
     }
 }
+

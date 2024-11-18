@@ -1,1 +1,30 @@
 PARTICIPANTS: use this file for creating the remove book from catalog diagram in mastery task 01
+@startuml
+actor Client
+participant "RemoveBookFromCatalogActivity" as API
+participant "CatalogDao" as CS
+participant "CatalogItemVersion Table" as Table
+
+
+alt Book ID is not found
+    API -> CS: Check if book exists(bookId)
+    CS --> API: BookNotFoundException
+    API -> Client: BookNotFoundException
+    deactivate API
+else Book is already inactive
+    API -> CS: Check if book is active(bookId)
+    CS --> API: BookNotFoundException
+    API -> Client: BookNotFoundException
+    deactivate API
+else Book is found and active
+    API -> CS: Deactivate book in table(bookId)
+    activate CS
+    CS -> Table: Update inactive=true for latest version of bookId
+    Table --> CS: Update successful
+    deactivate CS
+    CS --> API: Success
+    API -> Client: RemoveBookFromCatalogResponse {}
+    deactivate API
+end
+
+@enduml
