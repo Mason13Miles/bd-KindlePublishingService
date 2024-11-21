@@ -2,29 +2,29 @@ PARTICIPANTS: use this file for creating the remove book from catalog diagram in
 @startuml
 actor Client
 participant "RemoveBookFromCatalogActivity" as API
-participant "CatalogDao" as CS
+participant "CatalogDao" as CD
 participant "CatalogItemVersion Table" as Table
 
 
-alt Book ID is not found
-    API -> CS: Check if book exists(bookId)
-    CS --> API: BookNotFoundException
+
+    API -> CD: Check if book exists(bookId)
+    CD --> API: BookNotFoundException
     API -> Client: BookNotFoundException
     deactivate API
-else Book is already inactive
-    API -> CS: Check if book is active(bookId)
-    CS --> API: BookNotFoundException
+
+    API -> CD: Check if book is active(bookId)
+    CD --> API: BookNotFoundException
     API -> Client: BookNotFoundException
     deactivate API
-else Book is found and active
-    API -> CS: Deactivate book in table(bookId)
-    activate CS
-    CS -> Table: Update inactive=true for latest version of bookId
-    Table --> CS: Update successful
-    deactivate CS
-    CS --> API: Success
+
+    API -> CD: Deactivate book in table(bookId)
+    activate CD
+    CD -> Table: Update inactive=true for latest version of bookId
+    Table --> CD: Update successful
+    deactivate CD
+    CD --> API: Success
     API -> Client: RemoveBookFromCatalogResponse {}
     deactivate API
-end
+
 
 @enduml

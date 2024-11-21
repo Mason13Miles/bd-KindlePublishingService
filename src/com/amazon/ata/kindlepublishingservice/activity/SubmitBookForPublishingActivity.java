@@ -1,17 +1,14 @@
 package com.amazon.ata.kindlepublishingservice.activity;
 
-import com.amazon.ata.kindlepublishingservice.models.requests.SubmitBookForPublishingRequest;
-import com.amazon.ata.kindlepublishingservice.models.response.SubmitBookForPublishingResponse;
 import com.amazon.ata.kindlepublishingservice.converters.BookPublishRequestConverter;
 import com.amazon.ata.kindlepublishingservice.dao.CatalogDao;
 import com.amazon.ata.kindlepublishingservice.dao.PublishingStatusDao;
 import com.amazon.ata.kindlepublishingservice.dynamodb.models.PublishingStatusItem;
 import com.amazon.ata.kindlepublishingservice.enums.PublishingRecordStatus;
+import com.amazon.ata.kindlepublishingservice.models.requests.SubmitBookForPublishingRequest;
+import com.amazon.ata.kindlepublishingservice.models.response.SubmitBookForPublishingResponse;
 import com.amazon.ata.kindlepublishingservice.publishing.BookPublishRequest;
-
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
-import org.apache.commons.lang3.StringUtils;
+import com.amazon.ata.kindlepublishingservice.publishing.BookPublishRequestManager;
 
 import javax.inject.Inject;
 
@@ -23,16 +20,24 @@ import javax.inject.Inject;
  */
 public class SubmitBookForPublishingActivity {
 
-    private PublishingStatusDao publishingStatusDao;
+    private final PublishingStatusDao publishingStatusDao;
+    private final BookPublishRequestManager requestManager;
+    private final CatalogDao catalogDao;
 
     /**
      * Instantiates a new SubmitBookForPublishingActivity object.
      *
      * @param publishingStatusDao PublishingStatusDao to access the publishing status table.
+     * @param requestManager      BookPublishRequestManager to manage publishing requests.
+     * @param catalogDao          CatalogDao to interact with the catalog table.
      */
     @Inject
-    public SubmitBookForPublishingActivity(PublishingStatusDao publishingStatusDao) {
+    public SubmitBookForPublishingActivity(PublishingStatusDao publishingStatusDao,
+                                           BookPublishRequestManager requestManager,
+                                           CatalogDao catalogDao) {
         this.publishingStatusDao = publishingStatusDao;
+        this.requestManager = requestManager;
+        this.catalogDao = catalogDao;
     }
 
     /**
@@ -45,17 +50,28 @@ public class SubmitBookForPublishingActivity {
      * to check the publishing state of the book.
      */
     public SubmitBookForPublishingResponse execute(SubmitBookForPublishingRequest request) {
+
         final BookPublishRequest bookPublishRequest = BookPublishRequestConverter.toBookPublishRequest(request);
 
-        // TODO: If there is a book ID in the request, validate it exists in our catalog
-        // TODO: Submit the BookPublishRequest for processing
+        if (bookPublishRequest.getBookId() != null) {
+            try {
+                catalogDao.validateBookExists(bookPublishRequest.getBookId());
+            } catch(Exception e) {
+                System.out.println("Book not found by id");
+            }
+        }
 
-        PublishingStatusItem item =  publishingStatusDao.setPublishingStatus(bookPublishRequest.getPublishingRecordId(),
+        PublishingStatusItem item = publishingStatusDao.setPublishingStatus(
+                bookPublishRequest.getPublishingRecordId(),
                 PublishingRecordStatus.QUEUED,
-                bookPublishRequest.getBookId());
+                bookPublishRequest.getBookId()
+        );
+
+        requestManager.addBookPublishRequest(bookPublishRequest);
 
         return SubmitBookForPublishingResponse.builder()
                 .withPublishingRecordId(item.getPublishingRecordId())
                 .build();
     }
 }
+

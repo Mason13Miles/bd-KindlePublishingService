@@ -2,7 +2,6 @@ package com.amazon.ata.kindlepublishingservice.dao;
 
 import com.amazon.ata.kindlepublishingservice.dynamodb.models.PublishingStatusItem;
 import com.amazon.ata.kindlepublishingservice.enums.PublishingRecordStatus;
-import com.amazon.ata.kindlepublishingservice.exceptions.PublishingStatusNotFoundException;
 import com.amazon.ata.kindlepublishingservice.utils.KindlePublishingUtils;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
@@ -63,10 +62,10 @@ public class PublishingStatusDao {
         String statusMessage = KindlePublishingUtils.generatePublishingStatusMessage(publishingRecordStatus);
         if (StringUtils.isNotBlank(message)) {
             statusMessage = new StringBuffer()
-                .append(statusMessage)
-                .append(ADDITIONAL_NOTES_PREFIX)
-                .append(message)
-                .toString();
+                    .append(statusMessage)
+                    .append(ADDITIONAL_NOTES_PREFIX)
+                    .append(message)
+                    .toString();
         }
 
         PublishingStatusItem item = new PublishingStatusItem();
@@ -77,4 +76,21 @@ public class PublishingStatusDao {
         dynamoDbMapper.save(item);
         return item;
     }
+
+    /**
+     * Retrieves all publishing statuses associated with the given publishingRecordId.
+     *
+     * @param publishingRecordId The id of the publishing record to query.
+     * @return A list of PublishingStatusItems associated with the publishingRecordId.
+     */
+    public List<PublishingStatusItem> getPublishingStatuses(String publishingRecordId) {
+        PublishingStatusItem queryItem = new PublishingStatusItem();
+        queryItem.setPublishingRecordId(publishingRecordId);
+
+        DynamoDBQueryExpression<PublishingStatusItem> queryExpression = new DynamoDBQueryExpression<PublishingStatusItem>()
+                .withHashKeyValues(queryItem);
+
+        return dynamoDbMapper.query(PublishingStatusItem.class, queryExpression);
+    }
 }
+

@@ -5,6 +5,7 @@ import com.amazon.ata.kindlepublishingservice.activity.GetBookActivity;
 import com.amazon.ata.kindlepublishingservice.dagger.ApplicationComponent;
 import com.amazon.ata.kindlepublishingservice.models.*;
 import com.amazon.ata.kindlepublishingservice.models.requests.GetBookRequest;
+import com.fasterxml.jackson.databind.util.JSONPObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +30,7 @@ public class Controller {
 
     @PostMapping(value = "/books", consumes = {"application/json"}, produces = {"application/json"})
     public ResponseEntity<?> submitBookForPublishing(@Valid @RequestBody Book book) {
-        return null;
+        return  ResponseEntity.ok("Hello");
+
     }
 }
