@@ -2,6 +2,8 @@ package com.amazon.ata.kindlepublishingservice.dao;
 
 import com.amazon.ata.kindlepublishingservice.dynamodb.models.CatalogItemVersion;
 import com.amazon.ata.kindlepublishingservice.exceptions.BookNotFoundException;
+import com.amazon.ata.kindlepublishingservice.models.Book;
+import com.amazon.ata.kindlepublishingservice.publishing.BookPublishRequest;
 import com.amazon.ata.kindlepublishingservice.publishing.KindleFormattedBook;
 import com.amazon.ata.kindlepublishingservice.utils.KindlePublishingUtils;
 
@@ -10,6 +12,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
+import java.util.UUID;
 import javax.inject.Inject;
 
 public class CatalogDao {
@@ -57,6 +60,40 @@ public class CatalogDao {
             return null;
         }
         return results.get(0);
+    }
+
+    public Book publishBook(BookPublishRequest request) {
+
+        String bookId = StringUtils.isBlank(request.getBookId()) ? UUID.randomUUID().toString() : request.getBookId();
+        int version = 1;
+
+        Book book = Book.builder()
+                .withBookId(bookId)
+                .withTitle(request.getTitle())
+                .withAuthor(request.getAuthor())
+                .withText(request.getText())
+                .withGenre(request.getGenre().toString())
+                .withVersion(version)
+                .build();
+
+
+        if (StringUtils.isBlank(request.getBookId())) {
+            saveBookToCatalog(book);
+        } else {
+            validateBookExists(request.getBookId());
+            updateBookInCatalog(book);
+        }
+
+        return book;
+    }
+
+
+    private void saveBookToCatalog(Book book) {
+        dynamoDbMapper.save(book);
+    }
+
+    private void updateBookInCatalog(Book book) {
+        dynamoDbMapper.save(book);
     }
 
     public void removeBookFromCatalog(String bookId) {
